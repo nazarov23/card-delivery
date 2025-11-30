@@ -19,8 +19,24 @@ jobs:
           java-version: '11'
           distribution: 'temurin'
 
-      - name: Grant execute permission for gradlew
-        run: chmod +x gradlew
+      - name: Setup Gradle Wrapper
+        run: |
+          # Скачиваем и устанавливаем Gradle
+          wget https://services.gradle.org/distributions/gradle-8.5-bin.zip
+          unzip -q gradle-8.5-bin.zip
+          export PATH=$PWD/gradle-8.5/bin:$PATH
+          
+          # Создаем Gradle Wrapper если его нет
+          if [ ! -f "gradle/wrapper/gradle-wrapper.jar" ]; then
+            echo "Creating Gradle Wrapper..."
+            gradle wrapper --gradle-version 8.5
+          fi
+          
+          # Даем права на выполнение
+          chmod +x gradlew
+          
+          # Проверяем что работает
+          ./gradlew --version
 
       - name: Build with Gradle
         run: ./gradlew build -x test
@@ -28,16 +44,16 @@ jobs:
       - name: Run tests
         run: |
           # Запускаем SUT
-          java -jar ./artifacts/app-replan-delivery.jar &
+          java -jar ./artifacts/app-*.jar &
           # Ждем запуска приложения
-          sleep 10
+          sleep 15
           # Запускаем тесты
           ./gradlew test --info
         env:
           JAVA_OPTS: "-Dselenide.headless=true"
 
       - name: Upload test reports
-        uses: actions/upload-artifact@v4  # ✅ ОБНОВЛЕНО ДО v4!
+        uses: actions/upload-artifact@v4
         if: failure()
         with:
           name: test-reports
