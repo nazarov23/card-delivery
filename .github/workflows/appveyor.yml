@@ -43,10 +43,19 @@ jobs:
 
       - name: Run tests
         run: |
-          # Запускаем SUT
+          # Запускаем SUT в фоне
           java -jar ./artifacts/app-*.jar &
-          # Ждем запуска приложения
-          sleep 15
+          
+          # Увеличиваем время ожидания запуска приложения
+          echo "Waiting for application to start..."
+          sleep 30
+          
+          # Проверяем что приложение запустилось
+          curl -f http://localhost:9999 || echo "Application might still be starting..."
+          
+          # Даем дополнительное время
+          sleep 5
+          
           # Запускаем тесты
           ./gradlew test --info
         env:

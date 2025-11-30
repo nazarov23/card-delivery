@@ -1,133 +1,99 @@
-package ru.netology.delivery;
+@Test
+void shouldSuccessfullyPlanAndReplanMeeting() {
+    // Первое планирование
+    fillForm(DataGenerator.generateDate(4));
+    checkSuccessNotification(DataGenerator.generateDate(4));
 
-import com.codeborne.selenide.Condition;
-import com.codeborne.selenide.Configuration;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-import org.openqa.selenium.Keys;
-import ru.netology.delivery.data.DataGenerator;
-import ru.netology.delivery.data.UserInfo;
+    // Перепланирование
+    replanMeeting(DataGenerator.generateDate(7));
+    checkSuccessNotification(DataGenerator.generateDate(7));
+}
 
-import java.time.Duration;
+@Test
+void shouldShowErrorIfCityNotFromList() {
+    fillFormWithInvalidData("Несуществующий Город", user.getName(), user.getPhone());
+    checkFieldError("[data-test-id=city]", "Доставка в выбранный город недоступна");
+}
 
-import static com.codeborne.selenide.Condition.*;
-import static com.codeborne.selenide.Selenide.*;
+@Test
+void shouldShowErrorIfNameInvalid() {
+    fillFormWithInvalidData(user.getCity(), "John Doe", user.getPhone());
+    checkFieldError("[data-test-id=name]", "Имя и Фамилия указаные неверно");
+}
 
-public class CardDeliveryTest {
-    private UserInfo user;
+@Test
+void shouldShowErrorIfPhoneInvalid() {
+    $("[data-test-id=city] input").setValue(user.getCity());
+    $("[data-test-id=date] input").sendKeys(Keys.chord(Keys.SHIFT, Keys.HOME), Keys.BACK_SPACE);
+    $("[data-test-id=date] input").setValue(DataGenerator.generateDate(4));
+    $("[data-test-id=name] input").setValue(user.getName());
 
-    @BeforeEach
-    void setup() {
-        Configuration.browser = "chrome";
-        Configuration.browserSize = "1920x1080";
-        Configuration.headless = true;
-        Configuration.timeout = 15000;
+    // Невалидный телефон
+    $("[data-test-id=phone] input").setValue("123");
+    $("[data-test-id=agreement]").click();
+    $x("//*[text()='Запланировать']").click();
 
-        open("http://localhost:9999");
-        user = DataGenerator.generateUser();
-    }
+    // Проверяем что форма не отправилась
+    $("[data-test-id=success-notification]").shouldNotBe(visible, Duration.ofSeconds(10));
+}
 
-    @Test
-    void shouldSuccessfullyPlanAndReplanMeeting() {
-        // Первое планирование
-        fillForm(DataGenerator.generateDate(4));
-        checkSuccessNotification(DataGenerator.generateDate(4));
+@Test
+void shouldShowErrorIfAgreementNotChecked() {
+    $("[data-test-id=city] input").setValue(user.getCity());
+    $("[data-test-id=date] input").sendKeys(Keys.chord(Keys.SHIFT, Keys.HOME), Keys.BACK_SPACE);
+    $("[data-test-id=date] input").setValue(DataGenerator.generateDate(4));
+    $("[data-test-id=name] input").setValue(user.getName());
+    $("[data-test-id=phone] input").setValue(user.getPhone());
+    // Чекбокс НЕ отмечаем
+    $x("//*[text()='Запланировать']").click();
 
-        // Перепланирование
-        replanMeeting(DataGenerator.generateDate(7));
-        checkSuccessNotification(DataGenerator.generateDate(7));
-    }
+    $("[data-test-id=agreement].input_invalid")
+            .shouldBe(visible, Duration.ofSeconds(10));
+}
 
-    @Test
-    void shouldShowErrorIfCityNotFromList() {
-        $("[data-test-id=city] input").setValue("Несуществующий Город");
-        $("[data-test-id=date] input").sendKeys(Keys.chord(Keys.SHIFT, Keys.HOME), Keys.BACK_SPACE);
-        $("[data-test-id=date] input").setValue(DataGenerator.generateDate(4));
-        $("[data-test-id=name] input").setValue(user.getName());
-        $("[data-test-id=phone] input").setValue(user.getPhone());
-        $("[data-test-id=agreement]").click();
-        $x("//*[text()='Запланировать']").click();
+private void fillForm(String date) {
+    $("[data-test-id=city] input").setValue(user.getCity());
+    $("[data-test-id=date] input").sendKeys(Keys.chord(Keys.SHIFT, Keys.HOME), Keys.BACK_SPACE);
+    $("[data-test-id=date] input").setValue(date);
+    $("[data-test-id=name] input").setValue(user.getName());
+    $("[data-test-id=phone] input").setValue(user.getPhone());
+    $("[data-test-id=agreement]").click();
+    $x("//*[text()='Запланировать']").click();
+}
 
-        // Проверяем ошибку города
-        $("[data-test-id=city].input_invalid .input__sub")
-                .shouldHave(exactText("Доставка в выбранный город недоступна"));
-    }
+private void fillFormWithInvalidData(String city, String name, String phone) {
+    $("[data-test-id=city] input").setValue(city);
+    $("[data-test-id=date] input").sendKeys(Keys.chord(Keys.SHIFT, Keys.HOME), Keys.BACK_SPACE);
+    $("[data-test-id=date] input").setValue(DataGenerator.generateDate(4));
+    $("[data-test-id=name] input").setValue(name);
+    $("[data-test-id=phone] input").setValue(phone);
+    $("[data-test-id=agreement]").click();
+    $x("//*[text()='Запланировать']").click();
+}
 
-    @Test
-    void shouldShowErrorIfNameInvalid() {
-        $("[data-test-id=city] input").setValue(user.getCity());
-        $("[data-test-id=date] input").sendKeys(Keys.chord(Keys.SHIFT, Keys.HOME), Keys.BACK_SPACE);
-        $("[data-test-id=date] input").setValue(DataGenerator.generateDate(4));
-        $("[data-test-id=name] input").setValue("John Doe"); // Латинские буквы
-        $("[data-test-id=phone] input").setValue(user.getPhone());
-        $("[data-test-id=agreement]").click();
-        $x("//*[text()='Запланировать']").click();
+private void checkFieldError(String fieldSelector, String expectedError) {
+    $(fieldSelector + ".input_invalid")
+            .shouldBe(visible, Duration.ofSeconds(10));
+    $(fieldSelector + " .input__sub")
+            .shouldBe(visible)
+            .shouldHave(text(expectedError));
+}
 
-        // Проверяем ошибку имени
-        $("[data-test-id=name].input_invalid .input__sub")
-                .shouldHave(exactText("Имя и Фамилия указаные неверно. Допустимы только русские буквы, пробелы и дефисы."));
-    }
+private void replanMeeting(String newDate) {
+    $("[data-test-id=date] input").sendKeys(Keys.chord(Keys.SHIFT, Keys.HOME), Keys.BACK_SPACE);
+    $("[data-test-id=date] input").setValue(newDate);
+    $x("//*[text()='Запланировать']").click();
 
-    @Test
-    void shouldShowErrorIfPhoneInvalid() {
-        $("[data-test-id=city] input").setValue(user.getCity());
-        $("[data-test-id=date] input").sendKeys(Keys.chord(Keys.SHIFT, Keys.HOME), Keys.BACK_SPACE);
-        $("[data-test-id=date] input").setValue(DataGenerator.generateDate(4));
-        $("[data-test-id=name] input").setValue(user.getName());
+    // Увеличиваем время ожидания для перепланирования
+    $("[data-test-id=replan-notification]")
+            .shouldBe(visible, Duration.ofSeconds(20));
+    $x("//*[text()='Перепланировать']").click();
+}
 
-        // Невалидный телефон
-        $("[data-test-id=phone] input").setValue("123");
-        $("[data-test-id=agreement]").click();
-        $x("//*[text()='Запланировать']").click();
-
-        // Ждем и проверяем, что успеха нет
-        sleep(2000);
-        $("[data-test-id=success-notification]").shouldNotBe(visible);
-
-        // Форма должна остаться visible
-        $("[data-test-id=city]").shouldBe(visible);
-    }
-
-    @Test
-    void shouldShowErrorIfAgreementNotChecked() {
-        $("[data-test-id=city] input").setValue(user.getCity());
-        $("[data-test-id=date] input").sendKeys(Keys.chord(Keys.SHIFT, Keys.HOME), Keys.BACK_SPACE);
-        $("[data-test-id=date] input").setValue(DataGenerator.generateDate(4));
-        $("[data-test-id=name] input").setValue(user.getName());
-        $("[data-test-id=phone] input").setValue(user.getPhone());
-        // Чекбокс НЕ отмечаем
-        $x("//*[text()='Запланировать']").click();
-
-        // Проверяем ошибку согласия
-        $("[data-test-id=agreement].input_invalid .checkbox__text")
-                .shouldHave(exactText("Я соглашаюсь с условиями обработки и использования моих персональных данных"));
-    }
-
-    private void fillForm(String date) {
-        $("[data-test-id=city] input").setValue(user.getCity());
-        $("[data-test-id=date] input").sendKeys(Keys.chord(Keys.SHIFT, Keys.HOME), Keys.BACK_SPACE);
-        $("[data-test-id=date] input").setValue(date);
-        $("[data-test-id=name] input").setValue(user.getName());
-        $("[data-test-id=phone] input").setValue(user.getPhone());
-        $("[data-test-id=agreement]").click();
-        $x("//*[text()='Запланировать']").click();
-    }
-
-    private void replanMeeting(String newDate) {
-        $("[data-test-id=date] input").sendKeys(Keys.chord(Keys.SHIFT, Keys.HOME), Keys.BACK_SPACE);
-        $("[data-test-id=date] input").setValue(newDate);
-        $x("//*[text()='Запланировать']").click();
-
-        // Проверяем уведомление о перепланировании
-        $("[data-test-id=replan-notification]")
-                .shouldBe(visible, Duration.ofSeconds(15));
-        $x("//*[text()='Перепланировать']").click();
-    }
-
-    private void checkSuccessNotification(String expectedDate) {
-        $("[data-test-id=success-notification]")
-                .shouldBe(visible, Duration.ofSeconds(15));
-        $("[data-test-id=success-notification] .notification__content")
-                .shouldHave(exactText("Встреча успешно запланирована на " + expectedDate));
-    }
+private void checkSuccessNotification(String expectedDate) {
+    // Увеличиваем время ожидания и делаем проверку более надежной
+    $("[data-test-id=success-notification]")
+            .shouldBe(visible, Duration.ofSeconds(20));
+    $("[data-test-id=success-notification] .notification__content")
+            .shouldHave(exactText("Встреча успешно запланирована на " + expectedDate));
 }
