@@ -1,6 +1,6 @@
 # Автотесты для сервиса доставки карт
 
-[![Java CI with Gradle](https://github.com/your-username/card-delivery/actions/workflows/appveyor.yml/badge.svg)](https://github.com/your-username/card-delivery/actions/workflows/appveyor.yml)
+[![Java CI with Gradle](https://github.com/nazarov23/card-delivery/actions/workflows/appveyor.yml/badge.svg)](https://github.com/nazarov23/card-delivery/actions/workflows/appveyor.yml)
 
 ## Описание
 Автоматизированные тесты для проверки функциональности заказа доставки банковской карты.
