@@ -7,85 +7,22 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v2
 
       - name: Set up JDK 11
-        uses: actions/setup-java@v3
+        uses: actions/setup-java@v2
         with:
           java-version: '11'
-          distribution: 'temurin'
-
-      # КРИТИЧЕСКИ ВАЖНЫЙ ШАГ: Установка Chrome и ChromeDriver
-      - name: Install Chrome and ChromeDriver
-        run: |
-          sudo apt-get update
-          # Устанавливаем последнюю версию Chrome
-          sudo apt-get install -y wget
-          wget -q -O - https://dl.google.com/linux/linux_signing_key.pub | sudo apt-key add -
-          echo "deb [arch=amd64] http://dl.google.com/linux/chrome/deb/ stable main" | sudo tee /etc/apt/sources.list.d/google-chrome.list
-          sudo apt-get update
-          sudo apt-get install -y google-chrome-stable
-          # Проверяем версию Chrome
-          google-chrome-stable --version
-          
-          # Устанавливаем ChromeDriver, совместимый с установленным Chrome
-          CHROME_VERSION=$(google-chrome-stable --version | grep -oP '\d+\.\d+\.\d+\.\d+' | head -1 | cut -d'.' -f1)
-          echo "Detected Chrome major version: $CHROME_VERSION"
-          wget -q "https://storage.googleapis.com/chrome-for-testing-public/$CHROME_VERSION.0.0/linux64/chromedriver-linux64.zip"
-          unzip -q chromedriver-linux64.zip
-          sudo mv chromedriver-linux64/chromedriver /usr/local/bin/
-          sudo chmod +x /usr/local/bin/chromedriver
-          chromedriver --version
+          distribution: 'adopt'
 
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
 
-      # Запускаем тестовый сервер
       - name: Start SUT
         run: |
-          # Проверяем наличие JAR файла
-          if [ ! -f "./artifacts/app-replan-delivery.jar" ]; then
-            echo "ERROR: JAR file not found at ./artifacts/app-replan-delivery.jar"
-            ls -la artifacts/ 2>/dev/null || echo "artifacts/ directory not found"
-            exit 1
-          fi
-          
-          echo "Starting SUT: ./artifacts/app-replan-delivery.jar"
           java -jar ./artifacts/app-replan-delivery.jar --server.port=9999 &
-          SUT_PID=$!
-          echo $SUT_PID > sut.pid
-          
-          # Даем время на запуск и проверяем
-          sleep 10
-          
-          if curl -s -f http://localhost:9999 > /dev/null 2>&1; then
-            echo "✅ SUT started successfully"
-          else
-            echo "❌ SUT failed to start"
-            ps aux | grep java || true
-            exit 1
-          fi
+          sleep 15
 
-      # Запускаем тесты с дополнительными настройками для CI
       - name: Build with Gradle
-        run: ./gradlew test --info
-        env:
-          # Основные настройки для Selenide в CI
-          SELENIDE_HEADLESS: "true"
-          # Указываем путь к Chrome в CI
-          SELENIDE_BROWSER: "chrome"
-          # Увеличиваем таймауты для стабильности
-          SELENIDE_TIMEOUT: "10000"
-          # Отключаем анимацию и другие элементы для скорости
-          CHROME_OPTIONS: "--disable-dev-shm-usage --disable-gpu --no-sandbox --disable-extensions --disable-infobars --disable-notifications --disable-translate --headless"
-
-      # Останавливаем сервер
-      - name: Stop SUT
-        if: always()
-        run: |
-          if [ -f sut.pid ]; then
-            SUT_PID=$(cat sut.pid)
-            echo "Stopping SUT with PID: $SUT_PID"
-            kill $SUT_PID 2>/dev/null || true
-            rm -f sut.pid
-          fi
+        # Передаем системное свойство для включения headless режима через переменную окружения
+        run: ./gradlew test --info -Dselenide.headless=true
