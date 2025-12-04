@@ -30,19 +30,27 @@ public class DataGenerator {
     }
 
     public static String generatePhone() {
-        // Генерируем валидный российский номер
-        String[] operators = {"901", "902", "903", "904", "905", "906", "915", "916", "917", "919", "981", "982", "983", "984", "985", "986", "987", "988", "989"};
-        String operator = operators[random.nextInt(operators.length)];
-        String number = faker.numerify("#######");
-        return "+7" + operator + number;
+        return faker.phoneNumber().phoneNumber().replaceAll("[^0-9+]", "");
     }
 
     public static String generateInvalidPhone() {
-        // Генерируем заведомо невалидный номер
-        return "123";
+        // Случайная генерация невалидного телефона
+        String[] invalidPatterns = {
+                faker.numerify("####"),                           // слишком короткий
+                faker.numerify("############"),                   // слишком длинный
+                "8" + faker.numerify("##########"),              // начинается с 8 вместо +7
+                "+8" + faker.numerify("##########"),             // +8 вместо +7
+                "+" + faker.numerify("###########"),             // неправильный код страны
+                faker.numerify("+7###abc####"),                  // содержит буквы
+                "+7 " + faker.numerify("###") + " " + faker.numerify("###-##-##"), // с пробелами
+                "+7(" + faker.numerify("###) ###-##-##")         // со скобками
+        };
+
+        return invalidPatterns[random.nextInt(invalidPatterns.length)];
     }
 
-    public static UserInfo generateUser() {
-        return new UserInfo(generateCity(), generateName(), generatePhone());
+    public static UserInfo generateUser(boolean validPhone) {
+        String phone = validPhone ? generatePhone() : generateInvalidPhone();
+        return new UserInfo(generateCity(), generateName(), phone);
     }
 }
