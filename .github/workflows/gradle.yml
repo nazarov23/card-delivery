@@ -20,7 +20,8 @@ jobs:
 
       - name: Start SUT
         run: |
-          java -jar ./artifacts/app-replan-delivery.jar --server.port=9999
+          java -jar ./artifacts/app-replan-delivery.jar --server.port=9999 &
 
       - name: Build with Gradle
         # Передаем системное свойство для включения headless режима через переменную окружения
+        run: ./gradlew test --info -Dselenide.headless=true
