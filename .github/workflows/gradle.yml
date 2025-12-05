@@ -24,4 +24,3 @@ jobs:
 
       - name: Build with Gradle
         # Передаем системное свойство для включения headless режима через переменную окружения
-        run: ./gradlew test --info -Dselenide.headless=true
