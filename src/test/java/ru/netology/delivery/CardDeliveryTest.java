@@ -19,25 +19,20 @@ public class CardDeliveryTest {
 
     @Test
     void shouldSubmitFormSuccessfully() {
-        // Создаем пользователя с валидными данными
         UserInfo user = new UserInfo(
                 DataGenerator.generateCity(),
                 DataGenerator.generateName(),
-                DataGenerator.generatePhone(), // ВАЛИДНЫЙ телефон
-                DataGenerator.generateDate(3)
+                DataGenerator.generatePhone(),
+                DataGenerator.generateDate(3) // Добавляем дату как 4-й параметр
         );
 
-        // Заполняем форму
         $("[data-test-id=city] input").setValue(user.getCity());
         $("[data-test-id=date] input").doubleClick().sendKeys(user.getDate());
         $("[data-test-id=name] input").setValue(user.getName());
         $("[data-test-id=phone] input").setValue(user.getPhone());
         $("[data-test-id=agreement]").click();
-
-        // Отправляем форму
         $("button.button").click();
 
-        // Проверяем успешную отправку
         $("[data-test-id=success-notification]")
                 .shouldBe(Condition.visible, Duration.ofSeconds(15))
                 .shouldHave(Condition.text("Успешно"));
@@ -45,33 +40,67 @@ public class CardDeliveryTest {
 
     @Test
     void shouldShowErrorForInvalidPhone() {
-        // Создаем пользователя с НЕВАЛИДНЫМ телефоном
         UserInfo user = new UserInfo(
                 DataGenerator.generateCity(),
                 DataGenerator.generateName(),
-                DataGenerator.generateInvalidPhone(), // НЕВАЛИДНЫЙ телефон
-                DataGenerator.generateDate(3)
+                DataGenerator.generateInvalidPhone(),
+                DataGenerator.generateDate(3) // Добавляем дату
         );
 
-        // Заполняем форму
         $("[data-test-id=city] input").setValue(user.getCity());
         $("[data-test-id=date] input").doubleClick().sendKeys(user.getDate());
         $("[data-test-id=name] input").setValue(user.getName());
         $("[data-test-id=phone] input").setValue(user.getPhone());
         $("[data-test-id=agreement]").click();
-
-        // Пытаемся отправить
         $("button.button").click();
 
-        // Проверяем ошибку - телефон должен быть помечен как невалидный
-        // Мы знаем, что номер слишком короткий, поэтому ожидаем ошибку валидации
         $("[data-test-id=phone].input_invalid")
                 .shouldBe(Condition.visible, Duration.ofSeconds(5));
     }
 
     @Test
     void shouldRescheduleMeeting() {
-        // Тест на перепланирование...
-        // Используем аналогичный подход с конструктором UserInfo
+        // Первая запись
+        UserInfo firstUser = new UserInfo(
+                DataGenerator.generateCity(),
+                DataGenerator.generateName(),
+                DataGenerator.generatePhone(),
+                DataGenerator.generateDate(3)
+        );
+
+        $("[data-test-id=city] input").setValue(firstUser.getCity());
+        $("[data-test-id=date] input").doubleClick().sendKeys(firstUser.getDate());
+        $("[data-test-id=name] input").setValue(firstUser.getName());
+        $("[data-test-id=phone] input").setValue(firstUser.getPhone());
+        $("[data-test-id=agreement]").click();
+        $("button.button").click();
+
+        $("[data-test-id=success-notification]")
+                .shouldBe(Condition.visible, Duration.ofSeconds(15));
+
+        // Попытка перепланировать
+        open("http://localhost:9999");
+
+        UserInfo secondUser = new UserInfo(
+                firstUser.getCity(),
+                firstUser.getName(),
+                firstUser.getPhone(),
+                DataGenerator.generateDate(5) // Другая дата
+        );
+
+        $("[data-test-id=city] input").setValue(secondUser.getCity());
+        $("[data-test-id=date] input").doubleClick().sendKeys(secondUser.getDate());
+        $("[data-test-id=name] input").setValue(secondUser.getName());
+        $("[data-test-id=phone] input").setValue(secondUser.getPhone());
+        $("[data-test-id=agreement]").click();
+        $("button.button").click();
+
+        $("[data-test-id=replan-notification]")
+                .shouldBe(Condition.visible, Duration.ofSeconds(15));
+
+        $("[data-test-id=replan-notification] button").click();
+
+        $("[data-test-id=success-notification]")
+                .shouldBe(Condition.visible, Duration.ofSeconds(15));
     }
 }

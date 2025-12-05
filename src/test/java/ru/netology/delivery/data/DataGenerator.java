@@ -33,8 +33,7 @@ public class DataGenerator {
     }
 
     public static String generateInvalidPhone() {
-        // Генерируем ЗАВЕДОМО невалидный телефон - слишком короткий номер
-        // Это гарантирует предсказуемый результат теста
-        return faker.numerify("####"); // Всегда 4 цифры - заведомо невалидно
+        // Всегда возвращаем короткий номер
+        return faker.numerify("####");
     }
 }
