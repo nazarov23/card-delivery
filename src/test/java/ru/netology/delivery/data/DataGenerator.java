@@ -9,7 +9,7 @@ import java.util.Locale;
 
 @UtilityClass
 public class DataGenerator {
-    private static Faker faker = new Faker(new Locale("ru"));
+    private static final Faker faker = new Faker(new Locale("ru"));
 
     public static String generateDate(int daysToAdd) {
         return LocalDate.now().plusDays(daysToAdd)
@@ -29,11 +29,13 @@ public class DataGenerator {
     }
 
     public static String generatePhone() {
-        return faker.phoneNumber().phoneNumber().replaceAll("[^0-9+]", "");
+        // Генерируем валидный телефон в формате +7XXXXXXXXXX
+        return "+7" + faker.numerify("#########");
     }
 
     public static String generateInvalidPhone() {
-        // Всегда возвращаем короткий номер
-        return faker.numerify("####");
+        // Генерируем ЗАВЕДОМО невалидный телефон - всегда слишком короткий
+        // Это позволяет точно знать, какая ошибка должна появиться в тесте
+        return faker.numerify("###"); // Всегда 3 цифры - заведомо невалидно
     }
 }

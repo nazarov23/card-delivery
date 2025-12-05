@@ -9,5 +9,5 @@ public class UserInfo {
     private String city;
     private String name;
     private String phone;
-    private String date; // Добавляем поле date
+    private String date;
 }
