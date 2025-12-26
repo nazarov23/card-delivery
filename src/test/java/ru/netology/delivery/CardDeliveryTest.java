@@ -1,6 +1,6 @@
 package ru.netology.delivery;
 
-import com.codeborne.selenide.Configuration;
+import io.qameta.allure.Step;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
@@ -13,15 +13,14 @@ import java.time.Duration;
 import static com.codeborne.selenide.Condition.*;
 import static com.codeborne.selenide.Selenide.*;
 
-public class CardDeliveryTest {
+public class CardDeliveryTest extends TestBase {
     private UserInfo user;
 
     @BeforeEach
     void setup() {
-        Configuration.browserSize = "1920x1080";
+
         open("http://localhost:9999");
 
-        // Создаем тестового пользователя с валидными данными
         user = new UserInfo(
                 DataGenerator.generateCity(),
                 DataGenerator.generateName(),
@@ -32,142 +31,162 @@ public class CardDeliveryTest {
 
     @Test
     void shouldSubmitFormSuccessfully() {
-        // Заполняем форму
-        $("[data-test-id=city] input").setValue(user.getCity());
-        $("[data-test-id=date] input").doubleClick().sendKeys(Keys.BACK_SPACE);
-        $("[data-test-id=date] input").setValue(user.getDate());
-        $("[data-test-id=name] input").setValue(user.getName());
-        $("[data-test-id=phone] input").setValue(user.getPhone());
-        $("[data-test-id=agreement]").click();
-
-        // Отправляем форму
-        $("button.button").click();
-
-        // Проверяем успешную отправку
-        $("[data-test-id=success-notification]")
-                .shouldBe(visible, Duration.ofSeconds(15))
-                .shouldHave(text("Успешно"));
+        fillCity(user.getCity());
+        fillDate(user.getDate());
+        fillName(user.getName());
+        fillPhone(user.getPhone());
+        clickAgreement();
+        submitForm();
+        verifySuccessNotification();
     }
 
     @Test
     void shouldRescheduleMeeting() {
-        // Первая запись
         String firstDate = DataGenerator.generateDate(3);
-
         fillForm(firstDate);
         checkSuccessNotification(firstDate);
 
-        // Перепланирование на другую дату
         open("http://localhost:9999");
-
         String secondDate = DataGenerator.generateDate(5);
-
         fillForm(secondDate);
-
-        // Проверяем предложение перепланировать
-        $("[data-test-id=replan-notification]")
-                .shouldBe(visible, Duration.ofSeconds(15));
-
-        // Нажимаем "Перепланировать"
-        $("[data-test-id=replan-notification] button").click();
-
-        // Проверяем успешное перепланирование
+        verifyReplanNotification();
+        clickReplanButton();
         checkSuccessNotification(secondDate);
     }
 
     @Test
     void shouldShowErrorForInvalidCity() {
-        // Заполняем форму с невалидным городом
-        $("[data-test-id=city] input").setValue("Несуществующий Город");
-        $("[data-test-id=date] input").doubleClick().sendKeys(Keys.BACK_SPACE);
-        $("[data-test-id=date] input").setValue(user.getDate());
-        $("[data-test-id=name] input").setValue(user.getName());
-        $("[data-test-id=phone] input").setValue(user.getPhone());
-        $("[data-test-id=agreement]").click();
-
-        // Пытаемся отправить
-        $("button.button").click();
-
-        // Проверяем ошибку города
-        $("[data-test-id=city].input_invalid")
-                .shouldBe(visible, Duration.ofSeconds(5));
+        fillCity("Несуществующий Город");
+        fillDate(user.getDate());
+        fillName(user.getName());
+        fillPhone(user.getPhone());
+        clickAgreement();
+        submitForm();
+        verifyCityError();
     }
 
     @Test
     void shouldShowErrorForInvalidName() {
-        // Заполняем форму с именем на латинице
-        $("[data-test-id=city] input").setValue(user.getCity());
-        $("[data-test-id=date] input").doubleClick().sendKeys(Keys.BACK_SPACE);
-        $("[data-test-id=date] input").setValue(user.getDate());
-        $("[data-test-id=name] input").setValue("John Doe");
-        $("[data-test-id=phone] input").setValue(user.getPhone());
-        $("[data-test-id=agreement]").click();
-
-        // Пытаемся отправить
-        $("button.button").click();
-
-        // Проверяем ошибку имени
-        $("[data-test-id=name].input_invalid")
-                .shouldBe(visible, Duration.ofSeconds(5));
+        fillCity(user.getCity());
+        fillDate(user.getDate());
+        fillName("John Doe");
+        fillPhone(user.getPhone());
+        clickAgreement();
+        submitForm();
+        verifyNameError();
     }
 
     @Test
     void shouldShowErrorForUncheckedAgreement() {
-        // Заполняем форму без чекбокса
-        $("[data-test-id=city] input").setValue(user.getCity());
-        $("[data-test-id=date] input").doubleClick().sendKeys(Keys.BACK_SPACE);
-        $("[data-test-id=date] input").setValue(user.getDate());
-        $("[data-test-id=name] input").setValue(user.getName());
-        $("[data-test-id=phone] input").setValue(user.getPhone());
+        fillCity(user.getCity());
+        fillDate(user.getDate());
+        fillName(user.getName());
+        fillPhone(user.getPhone());
         // Чекбокс НЕ ставим!
+        submitForm();
+        verifyAgreementError();
+    }
 
-        // Пытаемся отправить
+    @Test
+    @Disabled("Баг приложения: валидация номера телефона не работает")
+    void shouldShowErrorForInvalidPhone() {
+        UserInfo invalidPhoneUser = new UserInfo(
+                user.getCity(),
+                user.getName(),
+                DataGenerator.generateInvalidPhone(),
+                user.getDate()
+        );
+        fillCity(invalidPhoneUser.getCity());
+        fillDate(invalidPhoneUser.getDate());
+        fillName(invalidPhoneUser.getName());
+        fillPhone(invalidPhoneUser.getPhone());
+        clickAgreement();
+        submitForm();
+        verifyPhoneError();
+    }
+
+
+    @Step("Заполняем поле города: {city}")
+    private void fillCity(String city) {
+        $("[data-test-id=city] input").setValue(city);
+    }
+
+    @Step("Заполняем поле даты: {date}")
+    private void fillDate(String date) {
+        $("[data-test-id=date] input").doubleClick().sendKeys(Keys.BACK_SPACE);
+        $("[data-test-id=date] input").setValue(date);
+    }
+
+    @Step("Заполняем поле имени: {name}")
+    private void fillName(String name) {
+        $("[data-test-id=name] input").setValue(name);
+    }
+
+    @Step("Заполняем поле телефона: {phone}")
+    private void fillPhone(String phone) {
+        $("[data-test-id=phone] input").setValue(phone);
+    }
+
+    @Step("Ставим галочку согласия")
+    private void clickAgreement() {
+        $("[data-test-id=agreement]").click();
+    }
+
+    @Step("Отправляем форму")
+    private void submitForm() {
         $("button.button").click();
+    }
 
-        // Проверяем ошибку чекбокса
+    @Step("Проверяем уведомление об успехе")
+    private void verifySuccessNotification() {
+        $("[data-test-id=success-notification]")
+                .shouldBe(visible, Duration.ofSeconds(15))
+                .shouldHave(text("Успешно"));
+    }
+
+    @Step("Проверяем ошибку города")
+    private void verifyCityError() {
+        $("[data-test-id=city].input_invalid")
+                .shouldBe(visible, Duration.ofSeconds(5));
+    }
+
+    @Step("Проверяем ошибку имени")
+    private void verifyNameError() {
+        $("[data-test-id=name].input_invalid")
+                .shouldBe(visible, Duration.ofSeconds(5));
+    }
+
+    @Step("Проверяем ошибку согласия")
+    private void verifyAgreementError() {
         $("[data-test-id=agreement].input_invalid")
                 .shouldBe(visible, Duration.ofSeconds(5));
     }
 
-    @Test
-    @Disabled("Баг приложения: валидация номера телефона не работает. " +
-            "Приложение принимает невалидные номера (например, '1234'). " +
-            "Создан issue: #1")
-    void shouldShowErrorForInvalidPhone() {
-        // Создаем пользователя с невалидным телефоном
-        UserInfo invalidPhoneUser = new UserInfo(
-                user.getCity(),
-                user.getName(),
-                DataGenerator.generateInvalidPhone(), // Например, "1234"
-                user.getDate()
-        );
-
-        // Заполняем форму
-        $("[data-test-id=city] input").setValue(invalidPhoneUser.getCity());
-        $("[data-test-id=date] input").doubleClick().sendKeys(Keys.BACK_SPACE);
-        $("[data-test-id=date] input").setValue(invalidPhoneUser.getDate());
-        $("[data-test-id=name] input").setValue(invalidPhoneUser.getName());
-        $("[data-test-id=phone] input").setValue(invalidPhoneUser.getPhone());
-        $("[data-test-id=agreement]").click();
-
-        // Пытаемся отправить
-        $("button.button").click();
-
-        // Ожидаем ошибку (но из-за бага приложения ее нет)
+    @Step("Проверяем ошибку телефона")
+    private void verifyPhoneError() {
         $("[data-test-id=phone].input_invalid")
                 .shouldBe(visible, Duration.ofSeconds(5));
     }
 
-    // Вспомогательные методы
+    @Step("Проверяем уведомление о перепланировании")
+    private void verifyReplanNotification() {
+        $("[data-test-id=replan-notification]")
+                .shouldBe(visible, Duration.ofSeconds(15));
+    }
 
+    @Step("Нажимаем кнопку 'Перепланировать'")
+    private void clickReplanButton() {
+        $("[data-test-id=replan-notification] button").click();
+    }
+
+    // Вспомогательные методы (можно оставить без @Step)
     private void fillForm(String date) {
-        $("[data-test-id=city] input").setValue(user.getCity());
-        $("[data-test-id=date] input").doubleClick().sendKeys(Keys.BACK_SPACE);
-        $("[data-test-id=date] input").setValue(date);
-        $("[data-test-id=name] input").setValue(user.getName());
-        $("[data-test-id=phone] input").setValue(user.getPhone());
-        $("[data-test-id=agreement]").click();
-        $("button.button").click();
+        fillCity(user.getCity());
+        fillDate(date);
+        fillName(user.getName());
+        fillPhone(user.getPhone());
+        clickAgreement();
+        submitForm();
     }
 
     private void checkSuccessNotification(String expectedDate) {

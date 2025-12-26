@@ -1,6 +1,7 @@
 plugins {
     id 'java'
     id 'io.freefair.lombok' version '6.0.0-m2'
+    id 'io.qameta.allure' version '2.12.0'
 }
 
 group = 'ru.netology'
@@ -18,10 +19,17 @@ dependencies {
     testImplementation 'org.junit.jupiter:junit-jupiter:5.9.0'
     testImplementation 'com.codeborne:selenide:6.17.2'
     testImplementation 'com.github.javafaker:javafaker:1.0.2'
-    testImplementation 'org.slf4j:slf4j-simple:2.0.7' // Добавьте эту строку
+    testImplementation 'org.slf4j:slf4j-simple:2.0.7'
+    testImplementation 'io.qameta.allure:allure-selenide:2.27.0'
+    testImplementation 'io.qameta.allure:allure-junit5:2.27.0'
 }
 
 test {
     useJUnitPlatform()
     systemProperty 'selenide.headless', System.getProperty('selenide.headless')
+    systemProperty 'allure.results.directory', 'build/allure-results'
 }
+
+allure {
+    version = '2.27.0'
+    }
